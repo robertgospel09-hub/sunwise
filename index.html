@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sunwise Solar Sizer</title>
+<meta name="description" content="Size a home solar system in minutes: inverter, batteries, panels and charge controller, with the maths shown.">
+<meta name="theme-color" content="#0E2A47">
+<meta property="og:title" content="Sunwise Solar Sizer">
+<meta property="og:description" content="List what you want to power. Get the solar system to match.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* Sunwise design system. Layout: one phone-sized app; on desktop it sits in a device frame with notes either side. */
+:root{
+  --panel:#0E2A47;      /* PV cell blue: primary dark */
+  --panel-2:#16385C;
+  --ink:#16202E;
+  --slate:#5B6779;
+  --muted:#98A2B1;
+  --line:#ECE6DA;
+  --bg:#FBF8F2;         /* daylight off-white */
+  --card:#FFFFFF;
+  --sun:#F5A623;        /* sunrise amber */
+  --sun-text:#A45A00;
+  --sun-bg:#FFF3DC;
+  --grad:linear-gradient(100deg,#FFC94A 0%,#F5A623 45%,#EE7D21 100%);
+  --sky:linear-gradient(180deg,#FFF6E4 0%,#FBF8F2 55%,#EEF4FA 100%);
+  --leaf:#14895B; --leaf-bg:#E3F4EA;
+  --warn:#8A4B00; --warn-bg:#FFF0D0;
+  --bad:#C2352B;  --bad-bg:#FDECEA;
+  --display:"Sora", "Segoe UI", system-ui, sans-serif;
+  --body:"Plus Jakarta Sans", "Segoe UI", system-ui, sans-serif;
+  --safe-top:env(safe-area-inset-top,0px); --safe-bottom:env(safe-area-inset-bottom,0px);
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{font-family:var(--body);background:var(--bg);color:var(--panel);-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer;background:none;border:0;padding:0}
+h1,h2,p{margin:0}
+:focus-visible{outline:2px solid var(--sun);outline-offset:2px}
+.num{font-variant-numeric:tabular-nums}
+
+/* frame */
+.stage{min-height:100%;display:flex;align-items:center;justify-content:center;gap:56px}
+.device{position:relative;width:100%;height:100dvh;background:var(--bg);display:flex;flex-direction:column;overflow:hidden}
+.device.is-sky{background:var(--sky)}
+.screen{flex:1 1 0;overflow:hidden auto;padding:calc(var(--safe-top) + 12px) 16px 24px}
+.screen.enter{animation:enter .28s ease}
+@keyframes enter{from{opacity:0;transform:translateX(14px)}to{opacity:1;transform:none}}
+.sb,.homebar,.side{display:none}
+@media (min-width:600px){
+  body{background:#EFE9DD}
+  .stage{padding:32px}
+  .device{width:390px;height:844px;flex:0 0 auto;border-radius:52px;box-shadow:0 0 0 11px var(--panel),0 0 0 12px #2B4766,0 40px 90px rgba(14,42,71,.28)}
+  .screen{padding-top:0}
+  .sb{display:flex;flex:0 0 auto;height:44px;padding:0 28px;align-items:center;justify-content:space-between;font-size:15px;font-weight:700;color:var(--ink)}
+  .homebar{display:block;position:absolute;left:128px;bottom:9px;width:134px;height:5px;border-radius:3px;background:#BDB7AC;pointer-events:none}
+  .side{display:block;max-width:250px;color:var(--slate);font-size:15px;line-height:1.55}
+  .side-k{font:700 20px/1.25 var(--display);color:var(--panel);margin-bottom:8px;text-wrap:balance}
+  .side-btn{margin-top:16px;height:44px;padding:0 18px;border-radius:12px;border:1px solid var(--line);background:#fff;font-weight:700;color:var(--panel)}
+  .side-btn:hover{border-color:var(--sun)}
+  .side ul{padding-left:18px;margin:10px 0 0}
+}
+@media (min-width:600px) and (max-width:1000px){.side{display:none}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* brand */
+.logo{display:inline-flex;flex-direction:column;align-items:center;gap:14px}
+.wordmark{font:800 44px/1 var(--display);letter-spacing:-.02em;color:var(--panel)}
+.wm-sun{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+
+/* type */
+.h1{font:800 28px/34px var(--display);letter-spacing:-.4px;text-wrap:balance}
+.h2{font:700 22px/28px var(--display);letter-spacing:-.2px}
+.lead{margin-top:12px;font-size:16px;line-height:24px;color:var(--slate);max-width:310px}
+.caps{font-size:11.5px;font-weight:700;color:var(--slate);letter-spacing:.5px;text-transform:uppercase}
+.muted{color:var(--slate)}
+.t16{font-size:16px;font-weight:800}
+
+/* buttons */
+.btn{width:100%;height:54px;border-radius:18px;background:var(--grad);color:var(--panel);font-size:16.5px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 8px 20px rgba(238,125,33,.25);transition:transform .12s,filter .2s}
+.btn:active{transform:scale(.985)}
+.btn:hover{filter:brightness(1.04)}
+.btn.ghost{background:#fff;border:1px solid var(--line);box-shadow:none;height:48px;font-size:15.5px}
+.btn.dark{background:var(--panel);color:#fff;box-shadow:none}
+.link{color:var(--sun-text);font-weight:700}
+.link:hover{text-decoration:underline}
+
+/* splash + onboarding */
+.splash{min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;text-align:center;padding-bottom:40px}
+.splash .tag{font-size:17px;color:var(--slate)}
+.splash-foot{position:absolute;left:0;right:0;bottom:28px;display:flex;justify-content:center;align-items:center;gap:8px;font-size:12px;font-weight:700;letter-spacing:.6px;color:var(--slate)}
+.onb{padding-top:12px;display:flex;flex-direction:column;min-height:100%}
+.onb-top{display:flex;justify-content:flex-end;height:36px;align-items:center}
+.onb-card{background:#fff;border:1px solid var(--line);border-radius:28px;overflow:hidden;margin-top:12px}
+.onb-card svg{display:block;width:100%;height:auto}
+.dots{display:flex;justify-content:center;gap:8px;margin:auto 0 22px;padding-top:28px}
+.dots i{width:8px;height:8px;border-radius:4px;background:var(--line);transition:width .2s}
+.dots i.on{width:24px;background:var(--sun)}
+
+/* headers */
+.hello{display:flex;justify-content:space-between;align-items:center;padding-top:12px}
+.hello p{font-size:15px;font-weight:500;color:var(--slate)}
+.hello h1{font:800 22px/28px var(--display);margin-top:2px}
+.round-btn{width:44px;height:44px;border-radius:50%;background:var(--sun-bg);display:grid;place-items:center;color:var(--sun-text)}
+.bh{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:12px;min-height:44px}
+.bh h1{font:800 24px/30px var(--display);letter-spacing:-.3px}
+.bh small{display:block;font-size:14px;color:var(--slate);margin-top:2px}
+
+/* stats */
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-top:20px}
+.stat{text-align:left;background:#fff;border:1px solid var(--line);border-radius:18px;padding:11px 11px 12px;display:flex;flex-direction:column}
+.stat-ic{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;margin-bottom:12px}
+.stat small{font-size:11.5px;color:var(--slate)}
+.stat b{font-size:16px;font-weight:800;margin-top:3px}
+
+/* hero (dark solar-panel card) */
+.hero{position:relative;margin-top:16px;border-radius:24px;padding:18px 16px 16px;color:#fff;background:
+  linear-gradient(160deg,rgba(255,255,255,.06),rgba(255,255,255,0) 40%),
+  repeating-linear-gradient(90deg,rgba(255,255,255,.05) 0 1px,transparent 1px 38px),
+  repeating-linear-gradient(0deg,rgba(255,255,255,.05) 0 1px,transparent 1px 38px),
+  var(--panel);overflow:hidden}
+.hero::after{content:"";position:absolute;right:-40px;top:-40px;width:140px;height:140px;border-radius:50%;background:radial-gradient(circle,rgba(255,201,74,.55),rgba(245,166,35,0) 70%)}
+.hero .caps{color:#AFC0D4}
+.hero h2{font:700 20px/26px var(--display);margin-top:4px}
+.hrow{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid rgba(255,255,255,.1)}
+.hrow:first-of-type{margin-top:12px}
+.hrow .tile{background:rgba(255,255,255,.09);color:var(--sun)}
+.hrow div{flex:1;min-width:0}
+.hrow small{display:block;font-size:12.5px;color:#AFC0D4}
+.hrow b{display:block;font-size:16px;font-weight:800;margin-top:1px}
+.hrow em{font-style:normal;font-size:12px;color:#AFC0D4;text-align:right}
+.hero .btn{margin-top:6px;height:48px;font-size:15.5px}
+
+/* cards & lists */
+.card{background:#fff;border:1px solid var(--line);border-radius:22px;padding:16px;margin-top:16px}
+.card-h{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.tile{width:40px;height:40px;border-radius:12px;background:#F5F1E8;display:grid;place-items:center;flex:0 0 auto;color:var(--panel)}
+.pill{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:7px;font-size:11.5px;font-weight:700;white-space:nowrap}
+.pill.ok{background:var(--leaf-bg);color:var(--leaf)}
+.pill.warn{background:var(--warn-bg);color:var(--warn)}
+.pill.sun{background:var(--sun-bg);color:var(--sun-text)}
+.pill.neu{background:#F1EDE4;color:var(--slate)}
+.bal{margin-top:14px;display:flex;flex-direction:column;gap:12px}
+.bal-row small{display:flex;justify-content:space-between;font-size:13px;color:var(--slate)}
+.bal-row small b{color:var(--ink);font-weight:800}
+.bar{margin-top:6px;height:10px;border-radius:5px;background:#F1EDE4;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:5px}
+.curve{margin-top:10px}
+.curve svg{width:100%;height:auto;display:block}
+.banner{display:flex;gap:12px;align-items:flex-start;margin-top:12px;padding:13px 14px;border-radius:18px;background:#F1EDE4}
+.banner b{display:block;font-size:14.5px;font-weight:800;color:var(--panel)}
+.banner p{font-size:13.5px;line-height:18px;color:var(--slate);margin-top:2px}
+.banner.ok{background:var(--leaf-bg)} .banner.ok b,.banner.ok p,.banner.ok svg{color:var(--leaf)}
+.banner.warn{background:var(--warn-bg)} .banner.warn b,.banner.warn p,.banner.warn svg{color:var(--warn)}
+.banner svg{flex:0 0 auto;margin-top:1px}
+
+/* loads */
+.search{display:flex;align-items:center;gap:12px;height:46px;padding:0 14px;background:#fff;border:1px solid var(--line);border-radius:16px;margin-top:16px;color:var(--muted)}
+.search:focus-within{border-color:var(--sun);box-shadow:0 0 0 3px rgba(245,166,35,.18)}
+.search input{flex:1;min-width:0;border:0;outline:0;background:transparent;font-size:15.5px;color:var(--panel)}
+.search input::placeholder{color:var(--muted)}
+.filter-row{display:flex;gap:6px;overflow-x:auto;margin:12px -16px 0;padding:0 16px 2px;scrollbar-width:none}
+.filter-row::-webkit-scrollbar{display:none}
+.fchip{flex:0 0 auto;height:32px;padding:0 13px;border-radius:16px;border:1px solid var(--line);background:#fff;font-size:14px;font-weight:600;color:var(--slate)}
+.fchip.on{background:var(--panel);border-color:var(--panel);color:#fff}
+.list{display:flex;flex-direction:column;gap:10px;margin-top:14px}
+.lcard{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--line);border-radius:20px;padding:12px 12px 12px 14px}
+.lc-main{flex:1;min-width:0;display:flex;gap:12px;align-items:center;text-align:left}
+.lc-txt{min-width:0;display:flex;flex-direction:column;gap:2px}
+.lc-txt b{font-size:15px;font-weight:800;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lc-txt small{font-size:12.5px;color:var(--slate)}
+.lc-txt .pill{align-self:flex-start;margin-top:3px}
+.stepper{display:flex;align-items:center;gap:2px;background:#F5F1E8;border-radius:12px;padding:3px;flex:0 0 auto}
+.stepper button{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;color:var(--panel)}
+.stepper button:hover{background:#fff}
+.stepper span{min-width:20px;text-align:center;font-weight:800;font-size:15px}
+.lcard.off{opacity:.55}
+.sum-bar{position:sticky;bottom:0;margin:16px -16px -24px;padding:12px 16px 16px;background:linear-gradient(180deg,rgba(251,248,242,0),var(--bg) 30%)}
+.empty{text-align:center;color:var(--slate);font-size:14.5px;padding:36px 12px}
+
+/* system */
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:18px;padding:4px;background:#F1EDE4;border-radius:16px}
+.seg button{height:34px;border-radius:12px;font-size:14.5px;font-weight:600;color:var(--slate)}
+.seg button.on{background:#fff;color:var(--panel);font-weight:800;box-shadow:0 1px 2px rgba(14,42,71,.08)}
+.mcard{background:#fff;border:1px solid var(--line);border-radius:22px;padding:16px;margin-top:12px}
+.mc-top{display:flex;align-items:center;gap:12px}
+.mc-ic{width:44px;height:44px;border-radius:14px;background:var(--sun-bg);color:var(--sun-text);display:grid;place-items:center;flex:0 0 auto}
+.mc-top div{flex:1;min-width:0}
+.mc-top small{display:block;font-size:12.5px;color:var(--slate)}
+.mc-top b{display:block;font:800 20px/26px var(--display)}
+.specs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+.specs small{display:block;font-size:11.5px;color:var(--slate)}
+.specs b{display:block;font-size:14px;font-weight:800;margin-top:3px}
+.mc-note{font-size:13px;color:var(--slate);margin-top:10px;line-height:18px}
+.rail{list-style:none;margin:16px 0 0;padding:0}
+.rail li{position:relative;display:flex;gap:14px;padding-bottom:14px}
+.rail li::before{content:"";position:absolute;left:21px;top:44px;bottom:0;width:2px;background:repeating-linear-gradient(180deg,var(--sun) 0 6px,transparent 6px 11px)}
+.rail li:last-child::before{display:none}
+.rail-dot{width:44px;height:44px;flex:0 0 auto;border-radius:50%;background:#fff;border:1px solid var(--line);display:grid;place-items:center;color:var(--panel);position:relative;z-index:1}
+.rail li:first-child .rail-dot{background:var(--sun-bg);color:var(--sun-text);border-color:transparent}
+.ev{flex:1;min-width:0;background:#fff;border:1px solid var(--line);border-radius:18px;padding:12px 14px;display:flex;flex-direction:column;gap:3px}
+.ev-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.ev-top b{font-size:15px;font-weight:800}
+.ev-top span{font-size:13.5px;font-weight:800;color:var(--sun-text);white-space:nowrap}
+.ev p{font-size:13px;color:var(--slate);line-height:18px}
+.formula{margin-top:6px;padding:8px 10px;border-radius:10px;background:#F8F5EE;font-size:12.5px;line-height:18px;color:var(--ink)}
+.formula b{color:var(--sun-text)}
+
+/* setup */
+.s-sec{font-size:11.5px;font-weight:700;color:var(--slate);letter-spacing:.5px;text-transform:uppercase;margin:22px 0 8px 4px}
+.s-group{background:#fff;border:1px solid var(--line);border-radius:22px;overflow:hidden}
+.s-row{display:flex;align-items:center;gap:10px;width:100%;min-height:58px;padding:8px 16px;text-align:left;border-bottom:1px solid var(--line)}
+.s-group>.s-row:last-child{border-bottom:0}
+.s-label{flex:1;min-width:0}
+.s-label b{display:block;font-size:15px;font-weight:700;color:var(--panel)}
+.s-label small{display:block;font-size:12.5px;color:var(--slate);margin-top:1px}
+.s-row select{height:38px;border:1px solid var(--line);border-radius:10px;background:#fff;padding:0 8px;font-size:14px;font-weight:600;max-width:150px}
+.mini-seg{display:flex;gap:3px;background:#F1EDE4;border-radius:11px;padding:3px}
+.mini-seg button{height:30px;padding:0 10px;border-radius:8px;font-size:13px;font-weight:600;color:var(--slate)}
+.mini-seg button.on{background:#fff;color:var(--panel);font-weight:800}
+button.s-row:hover{background:#FCFAF6}
+.s-row .danger{color:var(--bad)}
+
+/* tab bar */
+.tabbar{flex:0 0 auto;display:grid;grid-template-columns:repeat(5,1fr);background:#fff;border-top:1px solid var(--line);padding:10px 4px calc(var(--safe-bottom) + 10px)}
+.tabbar button{display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--muted);font-size:11.5px;font-weight:600;padding:4px 0}
+.tabbar button.on{color:var(--sun-text);font-weight:800}
+.tabbar button.on svg{color:var(--sun)}
+@media (min-width:600px){.tabbar{height:88px;padding:10px 4px 0;align-items:start}}
+
+/* sheet + toast */
+.sheet-wrap{position:absolute;inset:0;z-index:20;display:flex;flex-direction:column;justify-content:flex-end;background:rgba(14,42,71,.38);animation:fade .2s ease}
+@keyframes fade{from{opacity:0}}
+.sheet{background:var(--bg);border-radius:28px 28px 0 0;padding:10px 16px calc(var(--safe-bottom) + 22px);max-height:88%;overflow:auto;animation:up .26s ease}
+@keyframes up{from{transform:translateY(40px);opacity:.4}}
+.grab{width:40px;height:5px;border-radius:3px;background:#D9D2C4;margin:0 auto 14px}
+.fields{display:flex;flex-direction:column;gap:16px;margin-top:16px}
+.field{display:flex;flex-direction:column;gap:8px}
+.field-label{font-size:14.5px;font-weight:700;color:var(--ink)}
+.input{height:50px;display:flex;align-items:center;gap:10px;padding:0 14px;background:#fff;border:1px solid var(--line);border-radius:14px}
+.input:focus-within{border-color:var(--sun);box-shadow:0 0 0 3px rgba(245,166,35,.18)}
+.input input,.input select{flex:1;min-width:0;height:100%;border:0;outline:0;background:transparent;font-size:16px;color:var(--panel)}
+.input span{font-size:14px;color:var(--slate);font-weight:600}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.presets{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:12px}
+.preset{background:#fff;border:1px solid var(--line);border-radius:16px;padding:10px 8px;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;font-size:12.5px;font-weight:700;color:var(--ink)}
+.preset small{font-weight:500;color:var(--slate);font-size:11.5px}
+.preset:hover{border-color:var(--sun)}
+.preset .tile{width:36px;height:36px}
+.sheet-actions{display:flex;flex-direction:column;gap:10px;margin-top:22px}
+.del{height:44px;border-radius:14px;color:var(--bad);font-weight:700;font-size:15px}
+.toast{position:absolute;left:50%;bottom:calc(var(--safe-bottom) + 104px);transform:translateX(-50%);background:var(--panel);color:#fff;padding:12px 18px;border-radius:14px;font-size:14.5px;font-weight:600;white-space:nowrap;box-shadow:0 10px 30px rgba(14,42,71,.25);z-index:30;animation:toast .25s ease}
+@keyframes toast{from{opacity:0;transform:translate(-50%,8px)}}
+</style>
+</head>
+<body>
+<div class="stage">
+  <aside class="side">
+    <div class="side-k">Size solar the way installers do.</div>
+    <p>List what you want to power. Sunwise works out the inverter, batteries, panels and charge controller, and shows every step of the maths.</p>
+    <button class="side-btn" type="button" data-act="tour">Replay the tour</button>
+  </aside>
+  <div class="device" id="device">
+    <div class="sb"><span>9:41</span><span aria-hidden="true">
+      <svg width="64" height="12" viewBox="0 0 64 12" fill="currentColor"><rect x="0" y="7" width="3" height="5" rx="1"/><rect x="5" y="5" width="3" height="7" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="1" width="3" height="11" rx="1"/><path d="M30 3.5a9 9 0 0 1 11 0l-1.3 1.5a7 7 0 0 0-8.4 0zM32.3 6.3a5.5 5.5 0 0 1 6.4 0l-1.4 1.6a3.3 3.3 0 0 0-3.6 0zM35.5 9.5 37 11l-1.5 1.2L34 11z"/><rect x="46" y="1.5" width="15" height="9" rx="2.5" fill="none" stroke="currentColor"/><rect x="47.8" y="3.2" width="9" height="5.6" rx="1.2"/><rect x="62" y="4" width="1.6" height="4" rx=".8"/></svg></span></div>
+    <main class="screen" id="screen"></main>
+    <nav class="tabbar" id="tabbar" aria-label="Main"></nav>
+    <div class="homebar"></div>
+  </div>
+  <aside class="side">
+    <div class="side-k">Starts with an example home.</div>
+    <p>Lights, fans, a TV, a fridge, two laptops and Wi-Fi: about 5.5 kWh a day. Swap in your own appliances under Loads.</p>
+    <button class="side-btn" type="button" data-act="reset">Reset the example</button>
+  </aside>
+</div>
+
+<script>
+/* ---------- icons ---------- */
+const P = {
+  home:'<path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-5h4v5"/>',
+  plug:'<path d="M9 2v5M15 2v5"/><path d="M6 7h12v4a6 6 0 0 1-12 0z"/><path d="M12 17v5"/>',
+  bolt:'<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>',
+  book:'<path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 19V5"/><path d="M8 7h7M8 11h5"/>',
+  sliders:'<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>',
+  sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+  panel:'<path d="M5 4h14l2 11H3z"/><path d="M4 9.5h16M9.5 4l-.8 11M14.5 4l.8 11"/><path d="M12 15v4M8 20h8"/>',
+  battery:'<rect x="3" y="7" width="16" height="10" rx="2"/><path d="M21 10.5v3"/><path d="M7 10v4M10.5 10v4"/>',
+  inverter:'<rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 12c1.3-2.6 2.7-2.6 4 0s2.7 2.6 4 0"/><path d="M8 17h3"/>',
+  ctrl:'<rect x="3" y="5" width="18" height="14" rx="3"/><path d="M7 9h4l-2 3h3l-3 4"/><circle cx="16.5" cy="12" r="2"/>',
+  search:'<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>', minus:'<path d="M5 12h14"/>',
+  copy:'<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h8"/>',
+  check:'<path d="m5 12 4.5 4.5L19 7"/>', alert:'<path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17v.5"/>',
+  clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  bulb:'<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-4 10.5c.7.7 1 1.5 1 2.5h6c0-1 .3-1.8 1-2.5A6 6 0 0 0 12 3z"/>',
+  fan:'<circle cx="12" cy="12" r="1.8"/><path d="M12 10.2C11 6 12.5 3 15 3.5s1.5 4.5-3 6.7M13.6 12.9c3.3 2.9 3.9 6.2 1.6 7.2s-4.1-2.9-2.9-7.2M10.4 12.6c-4.2 1-7-.5-6.6-3s4.4-1.6 6.6 3"/>',
+  fridge:'<rect x="6" y="2" width="12" height="20" rx="2"/><path d="M6 9h12M9 5v2M9 12v3"/>',
+  tv:'<rect x="2" y="5" width="20" height="13" rx="2"/><path d="M8 21h8M12 18v3"/>',
+  laptop:'<rect x="4" y="5" width="16" height="11" rx="1.5"/><path d="M2 19h20"/>',
+  drop:'<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/>',
+  home2:'<path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/>'
+};
+const ic = (n,s=20,w=1.8) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[n]}</svg>`;
+const CAT_IC = {Lighting:"bulb",Cooling:"fan",Kitchen:"fridge",Media:"tv",Office:"laptop",Other:"plug"};
+const CATS = Object.keys(CAT_IC);
+
+/* ---------- data ---------- */
+const PRESETS = [
+  ["LED bulb","Lighting",10,6],["Security light","Lighting",20,12],
+  ["Ceiling fan","Cooling",75,8],["Standing fan","Cooling",55,8],["Air conditioner 1 HP","Cooling",900,4],
+  ["Fridge","Kitchen",150,10],["Chest freezer","Kitchen",200,12],["Microwave","Kitchen",1000,.25],["Blender","Kitchen",400,.2],
+  ["TV (43\")","Media",80,5],["Decoder","Media",20,5],["Sound system","Media",100,3],
+  ["Laptop","Office",65,6],["Desktop PC","Office",250,5],["Wi-Fi router","Office",15,24],["Phone charger","Office",10,3],
+  ["Water pump 1 HP","Other",750,.5],["Pressing iron","Other",1000,.25]
+];
+const EX_ROWS = [["LED bulb",8],["Ceiling fan",3],["TV (43\")",1],["Decoder",1],["Fridge",1],["Laptop",2],["Phone charger",4],["Wi-Fi router",1]];
+function example(){
+  return { rows: EX_ROWS.map(([n,q],i)=>{ const p=PRESETS.find(x=>x[0]===n); return {id:i+1,name:n,cat:p[1],w:p[2],h:p[3],q}; }),
+    nextId:EX_ROWS.length+1, psh:5, backup:1, btype:"lith", bV:12.8, bAh:200, panelW:450, sysV:"auto", filter:"All", seg:"parts", toured:false };
+}
+const BATT = { lith:{dod:.8,name:"Lithium (LiFePO4)",short:"Lithium",life:"3,000+ cycles"}, lead:{dod:.5,name:"Tubular / lead-acid",short:"Tubular",life:"about 1,000 cycles"} };
+const INV_EFF=.9, PF=.8, SURGE=1.25, LOSS=.75;
+const KVA=[.5,1,1.5,2,2.5,3,3.5,5,7.5,10,12,15,20], CC=[10,20,30,40,50,60,80,100,120,150,200];
+
+let S; try{ S = JSON.parse(localStorage.getItem("sunwise")); }catch(e){}
+if(!S || !Array.isArray(S.rows)) S = example();
+const save = () => { try{ localStorage.setItem("sunwise", JSON.stringify(S)); }catch(e){} };
+
+const f = (n,d=0) => Number(n).toLocaleString("en-GB",{maximumFractionDigits:d,minimumFractionDigits:d});
+const fx = n => Number(n).toLocaleString("en-GB",{maximumFractionDigits:2});
+const kwh = wh => wh>=1000 ? f(wh/1000,1)+" kWh" : f(wh)+" Wh";
+const kw = w => w>=1000 ? f(w/1000,2)+" kW" : f(w)+" W";
+const esc = s => String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+/* ---------- sizing engine ---------- */
+function calc(){
+  let load=0, energy=0;
+  S.rows.forEach(r=>{ load+=r.q*r.w; energy+=r.q*r.w*r.h; });
+  const invRaw = load*SURGE/1000/PF;
+  const inv = KVA.find(k=>k>=invRaw) || Math.ceil(invRaw);
+  const dod = BATT[S.btype].dod;
+  const bankWh = energy*S.backup/(dod*INV_EFF);
+  const sysV = S.sysV==="auto" ? ((inv<=1.5 && bankWh<=3000)?12:(inv<=3.5 && bankWh<=10000)?24:48) : +S.sysV;
+  const bankAh = bankWh/sysV;
+  const series = Math.max(1, Math.round(sysV/S.bV));
+  const parallel = Math.max(1, Math.ceil(bankAh/S.bAh));
+  const nBat = series*parallel, stored = nBat*S.bV*S.bAh;
+  const arrRaw = energy/(S.psh*LOSS);
+  const nPan = Math.max(1, Math.ceil(arrRaw/S.panelW)), arr = nPan*S.panelW;
+  const make = arr*S.psh*LOSS;
+  const ccRaw = arr/sysV*1.25, cc = CC.find(c=>c>=ccRaw) || Math.ceil(ccRaw/10)*10;
+  const heavy = S.rows.filter(r=>r.q>0 && r.w>=700);
+  return {load,energy,invRaw,inv,dod,bankWh,sysV,bankAh,series,parallel,nBat,stored,arrRaw,nPan,arr,make,ccRaw,cc,heavy,cover:energy?make/energy:1};
+}
+function checks(R){
+  const out=[];
+  out.push(R.cover>=1 ? ["ok","check","Panels cover your day",`They make about ${kwh(R.make)} a day, ${f(R.cover*100)}% of what you use.`]
+                      : ["warn","alert","Short on sun","Your panels can't refill a full day. Add a panel."]);
+  if(R.heavy.length) out.push(["warn","alert","Heavy appliances",`Run the ${R.heavy.map(r=>r.name.toLowerCase()).join(", ")} between 11am and 3pm, when the sun is strongest.`]);
+  if(S.btype==="lead") out.push(["warn","battery","Tubular batteries wear faster","Lithium gives you more usable power per battery and lasts about 3× longer."]);
+  if(R.sysV===12 && R.inv>1.5) out.push(["warn","alert","Voltage too low","12 V at this size needs very thick cables. Switch to 24 V or 48 V in Setup."]);
+  return out;
+}
+
+/* ---------- screens ---------- */
+const TABS = [["home","Home","home"],["loads","Loads","plug"],["system","System","bolt"],["learn","Learn","book"],["setup","Setup","sliders"]];
+let stage = "app", onbIx = 0, sheet = null, query = "";
+
+function greet(){ const h=new Date().getHours(); return h<12?"Good morning":h<17?"Good afternoon":"Good evening"; }
+
+function vHome(R){
+  const ch = checks(R);
+  const W=320,H=96, peak = Math.max(R.arr, R.load, 1);
+  const pts=[]; for(let i=0;i<=48;i++){ const t=i/48, x=t*W, y=H-8-(H-20)*Math.exp(-Math.pow((t-.5)/.2,2)/2)*(R.arr/peak); pts.push(`${x.toFixed(1)},${y.toFixed(1)}`); }
+  const useY = H-8-(H-20)*(R.energy/24/peak);
+  return `
+  <div class="hello"><div><p>${greet()}</p><h1>Your solar plan</h1></div>
+    <button class="round-btn" data-go="setup" aria-label="Open setup">${ic("sun",22)}</button></div>
+  <div class="stats">
+    <button class="stat" data-go="loads"><span class="stat-ic" style="background:var(--sun-bg);color:var(--sun-text)">${ic("bolt",17)}</span><small>Peak load</small><b class="num">${kw(R.load)}</b></button>
+    <button class="stat" data-go="loads"><span class="stat-ic" style="background:#E8EEF6;color:var(--panel)">${ic("clock",17)}</span><small>Daily use</small><b class="num">${kwh(R.energy)}</b></button>
+    <button class="stat" data-go="setup"><span class="stat-ic" style="background:var(--leaf-bg);color:var(--leaf)">${ic("battery",17)}</span><small>Backup</small><b class="num">${fx(S.backup)} ${S.backup==1?"day":"days"}</b></button>
+  </div>
+  <section class="hero">
+    <span class="caps">Recommended system</span>
+    <h2>${f(R.inv,R.inv%1?1:0)} kVA · ${R.sysV} V solar setup</h2>
+    ${hrow("inverter","Inverter",`${f(R.inv,R.inv%1?1:0)} kVA`,"pure sine")}
+    ${hrow("battery","Batteries",`${R.nBat} × ${f(S.bAh)}Ah`,BATT[S.btype].short)}
+    ${hrow("panel","Solar panels",`${R.nPan} × ${f(S.panelW)} W`,kw(R.arr))}
+    ${hrow("ctrl","Charge controller",`${R.cc} A MPPT`,R.sysV+" V")}
+    <button class="btn" data-go="system">See the full breakdown</button>
+  </section>
+  <section class="card">
+    <div class="card-h"><span class="t16">A sunny day</span><span class="pill ${R.cover>=1?"ok":"warn"}">${f(Math.min(R.cover,9.99)*100)}% covered</span></div>
+    <div class="curve"><svg viewBox="0 0 ${W} ${H+18}" role="img" aria-label="Solar output across the day compared with your average use">
+      <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F5A623" stop-opacity=".45"/><stop offset="1" stop-color="#F5A623" stop-opacity="0"/></linearGradient></defs>
+      <line x1="0" y1="${H-8}" x2="${W}" y2="${H-8}" stroke="#ECE6DA"/>
+      <polygon points="0,${H-8} ${pts.join(" ")} ${W},${H-8}" fill="url(#g)"/>
+      <polyline points="${pts.join(" ")}" fill="none" stroke="#EE7D21" stroke-width="2.2"/>
+      <line x1="0" y1="${useY}" x2="${W}" y2="${useY}" stroke="#0E2A47" stroke-width="1.6" stroke-dasharray="4 4"/>
+      <text x="${W-2}" y="${useY-5}" text-anchor="end" font-size="10.5" font-weight="700" fill="#0E2A47" font-family="Plus Jakarta Sans">Your average use</text>
+      <text x="0" y="${H+12}" font-size="10.5" fill="#5B6779" font-family="Plus Jakarta Sans">6am</text>
+      <text x="${W/2}" y="${H+12}" text-anchor="middle" font-size="10.5" fill="#5B6779" font-family="Plus Jakarta Sans">Noon</text>
+      <text x="${W}" y="${H+12}" text-anchor="end" font-size="10.5" fill="#5B6779" font-family="Plus Jakarta Sans">6pm</text>
+    </svg></div>
+    <div class="bal">
+      <div class="bal-row"><small><span>Panels make</span><b class="num">${kwh(R.make)}/day</b></small><div class="bar"><i style="width:${Math.min(100,R.make/Math.max(R.make,R.energy,1)*100)}%;background:var(--grad)"></i></div></div>
+      <div class="bal-row"><small><span>You use</span><b class="num">${kwh(R.energy)}/day</b></small><div class="bar"><i style="width:${Math.min(100,R.energy/Math.max(R.make,R.energy,1)*100)}%;background:var(--panel)"></i></div></div>
+    </div>
+  </section>
+  ${ch.map(([k,i,t,p])=>`<div class="banner ${k}">${ic(i,20)}<div><b>${t}</b><p>${p}</p></div></div>`).join("")}`;
+}
+const hrow=(i,k,v,e)=>`<div class="hrow"><span class="tile">${ic(i,20)}</span><div><small>${k}</small><b class="num">${v}</b></div><em>${e}</em></div>`;
+
+function vLoads(R){
+  const rows = S.rows.filter(r=>(S.filter==="All"||r.cat===S.filter) && r.name.toLowerCase().includes(query.toLowerCase()));
+  return `
+  <div class="bh"><div><h1>Your loads</h1><small>${S.rows.length} appliances · ${kwh(R.energy)} a day</small></div>
+    <button class="round-btn" data-act="add" aria-label="Add appliance">${ic("plus",22,2.2)}</button></div>
+  <label class="search">${ic("search",18)}<input id="q" type="search" placeholder="Search appliances" value="${esc(query)}" aria-label="Search appliances"></label>
+  <div class="filter-row">${["All",...CATS].map(c=>`<button class="fchip ${S.filter===c?"on":""}" data-filter="${c}">${c}</button>`).join("")}</div>
+  <div class="list">${rows.length? rows.map(r=>`
+    <div class="lcard ${r.q? "":"off"}">
+      <button class="lc-main" data-act="edit" data-id="${r.id}" aria-label="Edit ${esc(r.name)}">
+        <span class="tile">${ic(CAT_IC[r.cat]||"plug",20)}</span>
+        <span class="lc-txt"><b>${esc(r.name)}</b><small class="num">${f(r.w)} W · ${fx(r.h)} h/day</small><span class="pill ${r.w*r.q>=700?"warn":"sun"} num">${kwh(r.w*r.h*r.q)}/day</span></span>
+      </button>
+      <div class="stepper"><button data-act="dec" data-id="${r.id}" aria-label="One fewer ${esc(r.name)}">${ic("minus",16,2.2)}</button><span class="num">${r.q}</span><button data-act="inc" data-id="${r.id}" aria-label="One more ${esc(r.name)}">${ic("plus",16,2.2)}</button></div>
+    </div>`).join("") : `<div class="empty">${S.rows.length?"Nothing matches that search.":"No appliances yet. Add what you want to power."}</div>`}
+  </div>
+  <div class="sum-bar"><button class="btn" data-act="add">${ic("plus",18,2.4)} Add appliance</button></div>`;
+}
+
+function vSystem(R){
+  const parts = `
+    ${mcard("inverter","Inverter",`${f(R.inv,R.inv%1?1:0)} kVA`,[["Voltage",R.sysV+" V"],["Handles",kw(R.inv*1000*PF)],["Your peak",kw(R.load)]],"Pick a pure sine wave model. It turns battery DC into the AC your appliances need.")}
+    ${mcard("battery","Batteries",`${R.nBat} × ${f(S.bAh)}Ah`,[["Type",BATT[S.btype].short],["Wiring",`${R.series}S × ${R.parallel}P`],["Stores",kwh(R.stored)]],`${R.series} in series to reach ${R.sysV} V, ${R.parallel} ${R.parallel>1?"sets":"set"} in parallel for capacity. Rated ${BATT[S.btype].life}.`)}
+    ${mcard("panel","Solar panels",`${R.nPan} × ${f(S.panelW)} W`,[["Array",kw(R.arr)],["Sun hours",f(S.psh,1)+" h"],["Makes",kwh(R.make)+"/day"]],"Face them south, tilted around 10° to 15° for most of Nigeria, with no shade from 9am to 4pm.")}
+    ${mcard("ctrl","Charge controller",`${R.cc} A MPPT`,[["Battery bank",R.sysV+" V"],["Max current",f(R.ccRaw,1)+" A"],["Type","MPPT"]],"MPPT harvests up to 30% more than PWM. Many hybrid inverters have one built in.")}`;
+  const flow = [["panel","Solar panels",kw(R.arr),`${R.nPan} panels`],["ctrl","Charge controller",R.cc+" A","MPPT"],["battery","Battery bank",kwh(R.stored),`${R.nBat} batteries · ${R.sysV} V`],["inverter","Inverter",f(R.inv,R.inv%1?1:0)+" kVA","DC to AC"],["home2","Your home",kw(R.load),`${kwh(R.energy)} a day`]];
+  const wiring = `<ol class="rail">${flow.map(([i,t,v,s])=>`<li><span class="rail-dot">${ic(i,20)}</span><div class="ev"><div class="ev-top"><b>${t}</b><span class="num">${v}</span></div><p>${s}</p></div></li>`).join("")}</ol>`;
+  return `
+  <div class="bh"><div><h1>Your system</h1><small>What to buy, and how it connects</small></div>
+    <button class="round-btn" data-act="copy" aria-label="Copy shopping list">${ic("copy",20)}</button></div>
+  <div class="seg" role="tablist"><button role="tab" class="${S.seg==="parts"?"on":""}" data-seg="parts">Shopping list</button><button role="tab" class="${S.seg==="wire"?"on":""}" data-seg="wire">How it connects</button></div>
+  ${S.seg==="parts"?parts:wiring}
+  <div style="margin-top:16px"><button class="btn" data-act="copy">${ic("copy",18,2.2)} Copy list for your installer</button></div>`;
+}
+const mcard=(i,k,v,specs,note)=>`<section class="mcard"><div class="mc-top"><span class="mc-ic">${ic(i,22)}</span><div><small>${k}</small><b class="num">${v}</b></div></div>
+  <div class="specs">${specs.map(([a,b])=>`<div><small>${a}</small><b class="num">${b}</b></div>`).join("")}</div><p class="mc-note">${note}</p></section>`;
+
+function vLearn(R){
+  const inv=f(R.inv,R.inv%1?1:0);
+  const steps=[
+    ["plug","1. Add up your load",kw(R.load),"Watts running at once, and watt-hours over a day.",`Σ watts × qty = <b>${f(R.load)} W</b><br>Σ watts × qty × hours = <b>${f(R.energy)} Wh/day</b>`],
+    ["inverter","2. Size the inverter",inv+" kVA","Add 25% for start-up surges, then convert to kVA.",`${f(R.load)} W × 1.25 ÷ 0.8 PF = ${f(R.invRaw,2)} kVA → <b>${inv} kVA</b>`],
+    ["battery","3. Size the batteries",R.nBat+" units","Cover the backup days, only using the safe share of each battery.",`${f(R.energy)} × ${S.backup} ÷ (${R.dod} × 0.9) = ${f(R.bankWh)} Wh<br>÷ ${R.sysV} V = ${f(R.bankAh)} Ah ÷ ${S.bAh} Ah → <b>${R.parallel}P × ${R.series}S</b>`],
+    ["panel","4. Size the panels",R.nPan+" panels","Refill a day of use in your sun hours, allowing 25% for heat, dust and wiring.",`${f(R.energy)} ÷ (${f(S.psh,1)} h × 0.75) = ${f(R.arrRaw)} W<br>÷ ${S.panelW} W → <b>${R.nPan} panels</b>`],
+    ["ctrl","5. Size the controller",R.cc+" A","Array power over battery voltage, plus a 25% margin.",`${f(R.arr)} W ÷ ${R.sysV} V × 1.25 = ${f(R.ccRaw,1)} A → <b>${R.cc} A</b>`]
+  ];
+  return `
+  <div class="bh"><div><h1>How we sized it</h1><small>The 5 steps installers use, with your numbers</small></div></div>
+  <ol class="rail">${steps.map(([i,t,v,p,fm])=>`<li><span class="rail-dot">${ic(i,20)}</span><div class="ev"><div class="ev-top"><b>${t}</b><span class="num">${v}</span></div><p>${p}</p><div class="formula num">${fm}</div></div></li>`).join("")}</ol>
+  <div class="banner">${ic("sun",20)}<div><b>What are peak sun hours?</b><p>Not daylight hours. It's how many hours of full-strength sun your panels get. 12 hours of daylight in Lagos is roughly 5 peak sun hours.</p></div></div>`;
+}
+
+function vSetup(){
+  const opt=(arr,cur,lab=v=>v)=>arr.map(v=>`<option value="${v}" ${String(v)===String(cur)?"selected":""}>${lab(v)}</option>`).join("");
+  return `
+  <div class="bh"><div><h1>Setup</h1><small>Your site and the gear you prefer</small></div></div>
+  <div class="s-sec">Your site</div>
+  <div class="s-group">
+    <div class="s-row"><div class="s-label"><b>Peak sun hours</b><small>Most of Nigeria: 4.5 to 6</small></div>
+      <div class="stepper"><button data-step="psh" data-d="-0.5" aria-label="Fewer sun hours">${ic("minus",16,2.2)}</button><span class="num">${f(S.psh,1)}</span><button data-step="psh" data-d="0.5" aria-label="More sun hours">${ic("plus",16,2.2)}</button></div></div>
+    <div class="s-row"><div class="s-label"><b>Backup days</b><small>Power with no sun at all</small></div>
+      <div class="stepper"><button data-step="backup" data-d="-0.25" aria-label="Less backup">${ic("minus",16,2.2)}</button><span class="num">${fx(S.backup)}</span><button data-step="backup" data-d="0.25" aria-label="More backup">${ic("plus",16,2.2)}</button></div></div>
+  </div>
+  <div class="s-sec">Batteries</div>
+  <div class="s-group">
+    <div class="s-row"><div class="s-label"><b>Type</b><small>${S.btype==="lith"?"Uses 80% of capacity safely":"Uses only 50% of capacity"}</small></div>
+      <div class="mini-seg"><button class="${S.btype==="lith"?"on":""}" data-btype="lith">Lithium</button><button class="${S.btype==="lead"?"on":""}" data-btype="lead">Tubular</button></div></div>
+    <div class="s-row"><div class="s-label"><b>One battery</b><small>Voltage of each unit</small></div>
+      <select id="bV" aria-label="Battery voltage">${opt(S.btype==="lith"?[12.8,25.6,51.2]:[12],S.bV,v=>v+" V")}</select></div>
+    <div class="s-row"><div class="s-label"><b>Capacity</b><small>Amp-hours per battery</small></div>
+      <select id="bAh" aria-label="Battery amp-hours">${opt([100,150,200,220,250,300],S.bAh,v=>v+" Ah")}</select></div>
+  </div>
+  <div class="s-sec">Panels and wiring</div>
+  <div class="s-group">
+    <div class="s-row"><div class="s-label"><b>Panel size</b><small>Watts printed on one panel</small></div>
+      <select id="panelW" aria-label="Panel size">${opt([200,300,350,400,450,550,600],S.panelW,v=>v+" W")}</select></div>
+    <div class="s-row"><div class="s-label"><b>System voltage</b><small>Auto picks by system size</small></div>
+      <select id="sysV" aria-label="System voltage">${opt(["auto",12,24,48],S.sysV,v=>v==="auto"?"Auto":v+" V")}</select></div>
+  </div>
+  <div class="s-sec">App</div>
+  <div class="s-group">
+    <button class="s-row" data-act="tour"><span class="s-label"><b>Replay the tour</b></span>${ic("sun",18)}</button>
+    <button class="s-row" data-act="reset"><span class="s-label"><b class="danger">Reset to example home</b><small>Replaces your appliance list</small></span></button>
+  </div>`;
+}
+
+/* ---------- splash + onboarding ---------- */
+const LOGO = `<svg width="104" height="88" viewBox="0 0 104 88" aria-hidden="true">
+  <defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFC94A"/><stop offset="1" stop-color="#EE7D21"/></linearGradient></defs>
+  <circle cx="52" cy="30" r="17" fill="url(#lg)"/>
+  <g stroke="#F5A623" stroke-width="4" stroke-linecap="round"><path d="M52 2v5M26 12l3.5 3.5M78 12l-3.5 3.5M16 34h5M83 34h5"/></g>
+  <path d="M14 56h76l8 26H6z" fill="#0E2A47"/>
+  <g stroke="#3A5F87" stroke-width="2"><path d="M10 69h84M38 56l-3 26M66 56l3 26"/></g>
+</svg>`;
+const wordmark = s => `<span class="wordmark" style="font-size:${s}px">sun<span class="wm-sun">wise</span></span>`;
+const ONB = [
+  ["Power your home with the sun.","Tell us what you run. We size a solar system that keeps it on, day and night.",
+   `<svg viewBox="0 0 340 220"><rect width="340" height="220" fill="#FFF6E4"/><circle cx="250" cy="70" r="34" fill="#F5A623"/><circle cx="250" cy="70" r="52" fill="#F5A623" opacity=".15"/><path d="M70 120 140 70l70 50v70H70z" fill="#fff" stroke="#0E2A47" stroke-width="3"/><path d="M92 112l48-34 48 34" fill="#0E2A47"/><path d="M96 104l44-30 44 30" stroke="#3A5F87" stroke-width="1.5" fill="none"/><rect x="125" y="150" width="30" height="40" rx="3" fill="#0E2A47"/><rect x="88" y="140" width="24" height="20" rx="3" fill="#FFC94A"/><rect x="168" y="140" width="24" height="20" rx="3" fill="#FFC94A"/><path d="M0 190h340v30H0z" fill="#ECE6DA"/><path d="M226 120l-30 20M238 128l-18 30" stroke="#F5A623" stroke-width="3" stroke-dasharray="5 6" stroke-linecap="round"/></svg>`],
+  ["List what you want to power.","Fans, fridge, TV, Wi-Fi. Tap to add them and set how many hours they run.",
+   `<svg viewBox="0 0 340 220"><rect width="340" height="220" fill="#F5F1E8"/>${[0,1,2].map(i=>`<g transform="translate(40 ${30+i*58})"><rect width="260" height="46" rx="14" fill="#fff" stroke="#ECE6DA"/><rect x="10" y="9" width="28" height="28" rx="8" fill="${i===1?"#FFF3DC":"#F5F1E8"}"/><rect x="50" y="14" width="${[90,70,110][i]}" height="8" rx="4" fill="#0E2A47"/><rect x="50" y="28" width="60" height="6" rx="3" fill="#98A2B1"/><rect x="196" y="11" width="54" height="24" rx="8" fill="#F5F1E8"/><text x="223" y="28" text-anchor="middle" font-family="Plus Jakarta Sans" font-weight="800" font-size="13" fill="#0E2A47">${[8,3,1][i]}</text></g>`).join("")}</svg>`],
+  ["Get a shopping list you can trust.","Inverter, batteries, panels and controller, with every step of the maths shown.",
+   `<svg viewBox="0 0 340 220"><rect width="340" height="220" fill="#0E2A47"/><g opacity=".12" stroke="#fff">${Array.from({length:9},(_,i)=>`<path d="M${i*40} 0v220"/>`).join("")}${Array.from({length:6},(_,i)=>`<path d="M0 ${i*40}h340"/>`).join("")}</g><circle cx="300" cy="30" r="60" fill="#F5A623" opacity=".25"/>${[["1.5 kVA","Inverter"],["4 × 200Ah","Batteries"],["4 × 450 W","Panels"]].map(([v,k],i)=>`<g transform="translate(40 ${36+i*52})"><rect width="260" height="42" rx="12" fill="#fff" opacity=".08"/><circle cx="21" cy="21" r="11" fill="#F5A623"/><text x="42" y="26" font-family="Plus Jakarta Sans" font-size="12" fill="#AFC0D4">${k}</text><text x="248" y="27" text-anchor="end" font-family="Sora" font-weight="700" font-size="15" fill="#fff">${v}</text></g>`).join("")}</svg>`]
+];
+function vSplash(){ return `<div class="splash"><div class="logo">${LOGO}${wordmark(46)}</div><p class="tag" style="margin-top:14px">Solar, sized for your home.</p>
+  <div class="splash-foot">${ic("sun",16,2)} NO SIGN-UP · WORKS IN YOUR BROWSER</div></div>`; }
+function vOnb(){ const [h,p,art]=ONB[onbIx]; return `<div class="onb">
+  <div class="onb-top"><button class="link" data-act="skip">Skip</button></div>
+  <div class="onb-card">${art}</div>
+  <h1 class="h1" style="margin-top:28px">${h}</h1><p class="lead">${p}</p>
+  <div class="dots" aria-hidden="true">${ONB.map((_,i)=>`<i class="${i===onbIx?"on":""}"></i>`).join("")}</div>
+  <button class="btn" data-act="next">${onbIx<ONB.length-1?"Next":"Start sizing"}</button>
+  <p style="text-align:center;margin-top:16px;font-size:14.5px;color:var(--slate)">Starts with an example home you can edit.</p></div>`; }
+
+/* ---------- sheets ---------- */
+function vSheet(){
+  if(!sheet) return "";
+  if(sheet.type==="add") return `<div class="sheet-wrap" data-act="close"><div class="sheet" role="dialog" aria-label="Add appliance">
+    <div class="grab"></div><h2 class="h2">Add appliance</h2><p class="muted" style="font-size:14px;margin-top:4px">Tap one, or make your own below.</p>
+    <div class="presets">${PRESETS.map((p,i)=>`<button class="preset" data-preset="${i}"><span class="tile">${ic(CAT_IC[p[1]],18)}</span>${esc(p[0])}<small class="num">${f(p[2])} W</small></button>`).join("")}</div>
+    <div class="sheet-actions"><button class="btn ghost" data-act="custom">${ic("plus",18,2.2)} Custom appliance</button></div></div></div>`;
+  const r = sheet.row;
+  return `<div class="sheet-wrap" data-act="close"><div class="sheet" role="dialog" aria-label="${sheet.type==="new"?"New appliance":"Edit appliance"}">
+    <div class="grab"></div><h2 class="h2">${sheet.type==="new"?"New appliance":"Edit appliance"}</h2>
+    <div class="fields">
+      <div class="field"><label class="field-label" for="eName">Name</label><div class="input"><input id="eName" value="${esc(r.name)}" placeholder="e.g. Deep freezer"></div></div>
+      <div class="field"><label class="field-label" for="eCat">Category</label><div class="input"><select id="eCat">${CATS.map(c=>`<option ${c===r.cat?"selected":""}>${c}</option>`).join("")}</select></div></div>
+      <div class="two">
+        <div class="field"><label class="field-label" for="eW">Power</label><div class="input"><input id="eW" type="number" min="0" inputmode="decimal" value="${r.w}"><span>W</span></div></div>
+        <div class="field"><label class="field-label" for="eH">Use per day</label><div class="input"><input id="eH" type="number" min="0" max="24" step="0.25" inputmode="decimal" value="${r.h}"><span>h</span></div></div>
+      </div>
+      <div class="field"><label class="field-label" for="eQ">How many</label><div class="input"><input id="eQ" type="number" min="0" step="1" inputmode="numeric" value="${r.q}"></div></div>
+      <p class="muted" style="font-size:13px">Find the watts on the sticker or plate on the back. Fridges cycle on and off, so 8 to 12 hours a day is typical.</p>
+    </div>
+    <div class="sheet-actions"><button class="btn" data-act="saveRow">Save</button>${sheet.type==="edit"?`<button class="del" data-act="delRow">Remove appliance</button>`:""}</div></div></div>`;
+}
+
+/* ---------- render ---------- */
+const screen = document.getElementById("screen"), tabbar = document.getElementById("tabbar"), device = document.getElementById("device");
+function route(){ const h=location.hash.slice(1); return TABS.some(t=>t[0]===h)?h:"home"; }
+let lastView="";
+function render(anim){
+  save();
+  const R = calc();
+  let html, view;
+  if(stage==="splash"){ html=vSplash(); view="splash"; }
+  else if(stage==="onb"){ html=vOnb(); view="onb"+onbIx; }
+  else { view=route(); html={home:vHome,loads:vLoads,system:vSystem,learn:vLearn,setup:vSetup}[view](R); }
+  device.classList.toggle("is-sky", stage!=="app");
+  const keepScroll = view===lastView; const top = screen.scrollTop;
+  const focusId = document.activeElement && document.activeElement.id;
+  screen.innerHTML = html;
+  if(keepScroll) screen.scrollTop = top;
+  if(!keepScroll && anim!==false){ screen.classList.remove("enter"); void screen.offsetWidth; screen.classList.add("enter"); }
+  lastView = view;
+  tabbar.style.display = stage==="app" ? "" : "none";
+  tabbar.innerHTML = TABS.map(([id,l,i])=>`<button class="${view===id?"on":""}" data-go="${id}" ${view===id?'aria-current="page"':""}>${ic(i,22)}${l}</button>`).join("");
+  document.querySelectorAll(".sheet-wrap").forEach(e=>e.remove());
+  if(sheet) device.insertAdjacentHTML("beforeend", vSheet());
+  if(focusId==="q"){ const q=document.getElementById("q"); q.focus(); q.setSelectionRange(q.value.length,q.value.length); }
+}
+function toast(msg){ document.querySelectorAll(".toast").forEach(e=>e.remove()); device.insertAdjacentHTML("beforeend",`<div class="toast" role="status">${msg}</div>`); setTimeout(()=>document.querySelectorAll(".toast").forEach(e=>e.remove()),2400); }
+const byId = id => S.rows.find(r=>r.id===+id);
+
+document.addEventListener("click", async e=>{
+  const el = e.target.closest("[data-go],[data-act],[data-filter],[data-seg],[data-step],[data-btype],[data-preset]");
+  if(!el) return;
+  const d = el.dataset;
+  if(d.act==="close" && e.target!==el) return; // clicks inside the sheet
+  if(d.go){ sheet=null; if(location.hash.slice(1)===d.go) render(); else location.hash=d.go; screen.scrollTop=0; return; }
+  if(d.filter){ S.filter=d.filter; return render(false); }
+  if(d.seg){ S.seg=d.seg; return render(false); }
+  if(d.btype){ S.btype=d.btype; S.bV = d.btype==="lith"?12.8:12; return render(false); }
+  if(d.step){ const k=d.step, v=Math.round((S[k]+ +d.d)*100)/100; S[k]= k==="psh"?Math.min(8,Math.max(2,v)):Math.min(5,Math.max(.25,v)); return render(false); }
+  if(d.preset!==undefined){ const p=PRESETS[+d.preset]; const ex=S.rows.find(r=>r.name===p[0]); if(ex) ex.q++; else S.rows.push({id:S.nextId++,name:p[0],cat:p[1],w:p[2],h:p[3],q:1}); sheet=null; render(false); return toast(`${p[0]} added`); }
+  switch(d.act){
+    case "inc": byId(d.id).q++; return render(false);
+    case "dec": { const r=byId(d.id); r.q=Math.max(0,r.q-1); return render(false); }
+    case "add": sheet={type:"add"}; return render(false);
+    case "custom": sheet={type:"new",row:{name:"",cat:"Other",w:100,h:4,q:1}}; render(false); return document.getElementById("eName").focus();
+    case "edit": sheet={type:"edit",row:{...byId(d.id)}}; return render(false);
+    case "close": sheet=null; return render(false);
+    case "saveRow": {
+      const g=id=>document.getElementById(id).value;
+      const row={name:g("eName").trim()||"Appliance",cat:g("eCat"),w:Math.max(0,+g("eW")||0),h:Math.min(24,Math.max(0,+g("eH")||0)),q:Math.max(0,Math.round(+g("eQ")||0))};
+      if(sheet.type==="edit") Object.assign(byId(sheet.row.id),row); else S.rows.push({id:S.nextId++,...row});
+      sheet=null; render(false); return toast("Saved");
+    }
+    case "delRow": S.rows=S.rows.filter(r=>r.id!==sheet.row.id); sheet=null; render(false); return toast("Removed");
+    case "copy": {
+      const R=calc(), txt=`Sunwise solar plan\nLoad: ${kw(R.load)} peak, ${kwh(R.energy)} a day\n\nInverter: ${f(R.inv,1)} kVA pure sine, ${R.sysV} V\nBatteries: ${R.nBat} × ${S.bAh}Ah ${S.bV} V ${BATT[S.btype].short} (${R.series}S × ${R.parallel}P)\nSolar panels: ${R.nPan} × ${S.panelW} W (${kw(R.arr)})\nCharge controller: ${R.cc} A MPPT`;
+      try{ await navigator.clipboard.writeText(txt); toast("Copied. Send it to your installer."); }catch(err){ toast("Your browser blocked copying"); }
+      return;
+    }
+    case "reset": { const t=S.toured; S=example(); S.toured=t; sheet=null; query=""; render(false); return toast("Example home restored"); }
+    case "tour": stage="onb"; onbIx=0; sheet=null; return render();
+    case "next": if(onbIx<ONB.length-1){ onbIx++; return render(); } /* falls through */
+    case "skip": stage="app"; S.toured=true; location.hash="home"; return render();
+  }
+});
+document.addEventListener("input", e=>{
+  if(e.target.id==="q"){ query=e.target.value; return render(false); }
+});
+document.addEventListener("change", e=>{
+  const id=e.target.id;
+  if(["bV","bAh","panelW","sysV"].includes(id)){ S[id] = id==="sysV"&&e.target.value==="auto" ? "auto" : +e.target.value; render(false); }
+});
+document.addEventListener("keydown", e=>{ if(e.key==="Escape" && sheet){ sheet=null; render(false); } });
+window.addEventListener("hashchange", ()=>{ if(stage==="app") render(); });
+
+if(!S.toured){ stage="splash"; render(); setTimeout(()=>{ stage="onb"; render(); }, 1600); }
+else render();
+</script>
+</body>
+</html>
